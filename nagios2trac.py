@@ -6,8 +6,11 @@ from optparse import OptionParser
 
 parser = OptionParser()
 parser.add_option("-p", "--password", action="store", type="string", dest="password", help= "trac password")
-parser.add_option("--host", action="store", type="string", dest="critical_host", help="critical host, reported by nagios")
-parser.add_option("-d","--description", action="store", type="string", dest="description", help="nagios $SERVICE/HOSTDESC$, will be used in TRAC summary field")
+parser.add_option("--host-name", action="store", type="string", dest="critical_host", help="critical host, reported by nagios")
+parser.add_option("--service-state", action="store", type="string", dest="service_state", help="service state (e.g. CRITICAL, reported by nagios")
+parser.add_option("--description", action="store", type="string", dest="description", help="nagios $SERVICE/HOSTDESC$, will be used in TRAC summary field")
+parser.add_option("--longoutput", action="store", type="string", dest="long_output", help="$LONGSERVICEOUTPUT$, reported by nagios")
+parser.add_option("--list-methods", action="store_true", dest="listmethods", help="list xmlrpc methods")
 ## needed options ##
 # * trac host
 # * trac user
@@ -20,7 +23,69 @@ parser.add_option("-d","--description", action="store", type="string", dest="des
 if options.password is None:
     parser.error("please specify a password")
 
-#print options.password
+if options.critical_host is None:
+    parser.error("please specify a host-name")
+
+if options.service_state is None:
+    parser.error("please specify a service-state")
+
+if options.description is None:
+    parser.error("please specify a scription")
+
+#######
+summary_template = "[" + options.critical_host + "] " + options.service_state + ": " + options.description
+comment_template = "and again:\n {{{ \n[" + options.critical_host + "] " + options.service_state + ": " + options.description + "\n" + options.long_output + "\n}}}"
+######
+print summary_template
+
+### initialize server ###
+server = xmlrpclib.ServerProxy("http://nagios:%s@tractest01.jimdo.office/trac/login/xmlrpc" % options.password)
+multicall = xmlrpclib.MultiCall(server)
+
+if options.listmethods:
+    # FIXME make me a function
+    for method in server.system.listMethods():
+        multicall.system.methodHelp(method)
+
+    for help in multicall():
+        lines = help.splitlines()
+        print lines[0]
+        print '\n'.join(['  ' + x for x in lines[2:]])
+        print
+    sys.exit(1)
+
+
+
+
+## search for tickets with same summary_template
+
+# ticket ids that contain the same summary and are not closed! (e.g. an incident that happened alreadyalready  not long time ago
+## if there is more than 1 matching ticket, use the one with the highest id
+open_ticket_with_same_summary=server.ticket.query("summary=" + summary_template + "&status!=closed")
+
+if open_ticket_with_same_summary:
+    # post message to ticket (%LONGOUTPUT)
+    server.ticket.update(open_ticket_with_same_summary[0], comment_template)
+else:
+#elseif tickets open for same $hostname
+    open_ticket_for_same_host=server.ticket.query("summary^=[" + options.critical_host + "]&status!=closed")
+    if open_ticket_for_same_host:
+        server.ticket.update(open_ticket_for_same_host[0], comment_template)
+
+
+#print duplicate_summarys
+
+
+#print tickets
+
+#for ticket in server.ticket.query("summary=Intrusion-Detection: Tiger aufsetzen"):
+#    multicall.ticket.get(ticket)
+
+print("reached end")
+sys.exit(1)
+
+#xmlrpclib.ServerProxy.find_ticket_by_summary = find_ticket_by_summary
+
 
 def find_ticket_by_summary(self, summary):
     ticket_ids = self.ticket.query('summary^={0}&order=id&desc=1&max=1'.format(summary))
@@ -29,27 +94,14 @@ def find_ticket_by_summary(self, summary):
         ticket = server.ticket.get(ticket_id)
         return ticket
 
-xmlrpclib.ServerProxy.find_ticket_by_summary = find_ticket_by_summary
 
-server = xmlrpclib.ServerProxy("http://nagios:%s@tractest01.jimdo.office/trac/login/xmlrpc" % options.password)
 
-summary_template = "[{host}] {service_state}: {description}"
-comment_template = "It happened again!\n{LONGSERVICEOUTPUT}"
+
+
+#################
 description_template = "ticket description"
 REOPEN_THRESHOLD = datetime.datetime.now() - datetime.timedelta(7)
 MULTISERVICE_FUCKUP_THERSHOLD = datetime.datetime.now() - datetime.timedelta(0, 0, 15)
-
-multicall = xmlrpclib.MultiCall(server)
-for method in server.system.listMethods():
-    multicall.system.methodHelp(method)
-
-for help in multicall():
-    lines = help.splitlines()
-    print lines[0]
-    print '\n'.join(['  ' + x for x in lines[2:]])
-    print
-
-print server.ticket.query('summary^=[Nagios]')
 
 
 def create_tickets(nagios_input, trac_api):
@@ -82,15 +134,3 @@ def create_tickets(nagios_input, trac_api):
     trac_api.commit()
 
 create_tickets(nagios_input, server)
-#multicall = xmlrpclib.MultiCall(server)
-#for ticket in server.ticket.query("summary=Intrusion-Detection: Tiger aufsetzen"):
-#    multicall.ticket.get(ticket)
-#print map(str, multicall())
-#
-## subject ($@)
-#
-## check for open ticket with summary = $subject
-#len(server.ticket.query("summary=Intrusion-Detection: Tiger aufsetzen"))
-#
-## found: comment to ticket
-## not found: open new ticket

@@ -20,23 +20,18 @@ parser.add_option("--list-methods", action="store_true", dest="listmethods", hel
 
 (options, args) = parser.parse_args()
 
-if options.password is None:
+# FIXME - beautify
+if options.password is None and not options.listmethods:
     parser.error("please specify a password")
 
-if options.critical_host is None:
+if options.critical_host is None and not options.listmethods:
     parser.error("please specify a host-name")
 
-if options.service_state is None:
+if options.service_state is None and not options.listmethods:
     parser.error("please specify a service-state")
 
-if options.description is None:
+if options.description is None and not options.listmethods:
     parser.error("please specify a scription")
-
-#######
-summary_template = "[" + options.critical_host + "] " + options.service_state + ": " + options.description
-comment_template = "and again:\n {{{ \n[" + options.critical_host + "] " + options.service_state + ": " + options.description + "\n" + options.long_output + "\n}}}"
-######
-print summary_template
 
 ### initialize server ###
 server = xmlrpclib.ServerProxy("http://nagios:%s@tractest01.jimdo.office/trac/login/xmlrpc" % options.password)
@@ -55,51 +50,74 @@ if options.listmethods:
     sys.exit(1)
 
 
+#######
+summary_template = "[" + options.critical_host + "] " + options.service_state + ": " + options.description
+comment_template = "{{{ \n[" + options.critical_host + "] " + options.service_state + ": " + options.description + "\n" + options.long_output + "\n}}}"
+description_template = '=== Incident === \n \
+ * Does it affect only one user/colleague? Not an incident, normal support case. \n \
+ * What has been noticed? (e.g. nagios check + host that failed)\n' + comment_template + '\n \
+ * Who is affected? (all users, limited set of users, departments, partners, ...) \n \
+ * When did it start? (e.g. nagios reported time) \n \
+ * How did you notice it (Monitoring, Support..?) \n \
+ \n \
+=== Spread the word first, then act === \n \
+ * Always put a link to this ticket everywhere you inform your colleagues about it \n \
+ * Tell Yammer group "System Status" when the incident started (latest 30min after incident notice!) \n \
+ * Update Yammer at least every hour for incidents during office hours, even if nothing changed. \n \
+ * Be available in Infrastruktur channel and communicate to your colleagues \n \
+ * Announce waiting times longer than one hour (e.g. waiting for the hosting provider) as "time for next update" \n \
+ \n \
+ * Update Ticket and Yammer AFTER incident is over, too. \n \
+ \n \
+=== Recommended Checks and Actions === \n \
+ * [wiki:NuetzlicheShell], [wiki:AdminHandbuch] \n \
+ \n \
+=== Ask for Help (esp. during office hours) === \n \
+ * Get help at big incidents and pair the incident \n \
+ * Ask for help in communication/documentation for bigger incidents \n \
+ \n \
+=== Post Mortem Analysis === \n \
+ * How has it been resolved? What was the fix? \n \
+ * How was the issue triggered? What have been the circumstances? \n \
+ * What was affected? (see Incident, Who is already documented there) \n \
+ * How can this situation be avoided in the future? (only relevant if "rule of three" triggered or effect is considered "major" by the team) \n \
+ * Did a known standard solution work? If not: Document it! e.g. in [wiki:NuetzlicheShell], [wiki:AdminHandbuch] \n \
+ * Close the ticket, if no further actions can be derived from it.'
+######
 
+mail_notifications=True
+assign_to_user='bonko'
 
 ## search for tickets with same summary_template
 
-# ticket ids that contain the same summary and are not closed! (e.g. an incident that happened alreadyalready  not long time ago
-## if there is more than 1 matching ticket, use the one with the highest id
+
+# ticket ids that contain the same summary and are not closed! (e.g. an incident that happened already not long time ago
+# if there is more than 1 matching ticket, use the one with the highest id
 open_ticket_with_same_summary=server.ticket.query("summary=" + summary_template + "&status!=closed")
 
 if open_ticket_with_same_summary:
-    # post message to ticket (%LONGOUTPUT)
-    server.ticket.update(open_ticket_with_same_summary[0], comment_template)
+    # post message to ticket
+    server.ticket.update(open_ticket_with_same_summary[0], comment_template,{},mail_notifications)
+    print("appended to a ticket because of FULL summary match")
 else:
-#elseif tickets open for same $hostname
+    #elseif tickets open for same $hostname
     open_ticket_for_same_host=server.ticket.query("summary^=[" + options.critical_host + "]&status!=closed")
     if open_ticket_for_same_host:
-        server.ticket.update(open_ticket_for_same_host[0], comment_template)
+        # maybe only post if last edit time > 15 min to prevent trac spam when many services of a host fail
+        server.ticket.update(open_ticket_for_same_host[0], comment_template,{},mail_notifications)
+        print("appended to a ticket because of hostname match")
+    else:
+        # create a new ticket
+        # replace comment_template with description_template(contains incident template)
+        server.ticket.create(summary_template,description_template,{'owner': assign_to_user, 'type': 'Incident', 'priority': 'critical'},mail_notifications)
+        print("created a new ticket")
 
 
-#print duplicate_summarys
-
-
-#print tickets
-
-#for ticket in server.ticket.query("summary=Intrusion-Detection: Tiger aufsetzen"):
-#    multicall.ticket.get(ticket)
 
 print("reached end")
 sys.exit(1)
 
-#xmlrpclib.ServerProxy.find_ticket_by_summary = find_ticket_by_summary
-
-
-def find_ticket_by_summary(self, summary):
-    ticket_ids = self.ticket.query('summary^={0}&order=id&desc=1&max=1'.format(summary))
-    if ticket_ids:
-        ticket_id = ticket_ids.pop()
-        ticket = server.ticket.get(ticket_id)
-        return ticket
-
-
-
-
-
 #################
-description_template = "ticket description"
 REOPEN_THRESHOLD = datetime.datetime.now() - datetime.timedelta(7)
 MULTISERVICE_FUCKUP_THERSHOLD = datetime.datetime.now() - datetime.timedelta(0, 0, 15)
 

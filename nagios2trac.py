@@ -90,8 +90,12 @@ description_template = """=== Incident ===
 mail_notifications=True
 assign_to_user='bonko'
 
-## search for tickets with same summary_template
+## dont create a new ticket when a service recovers ##
 
+service_recovered = options.service_state.startswith(('OK','UP'))
+
+
+## search for tickets with same summary_template
 
 # ticket ids that contain the same summary and are not closed! (e.g. an incident that happened already not long time ago
 # if there is more than 1 matching ticket, use the one with the highest id
@@ -108,7 +112,7 @@ else:
         # maybe only post if last edit time > 15 min to prevent trac spam when many services of a host fail
         server.ticket.update(open_ticket_for_same_host[0], comment_template,{},mail_notifications)
         print("appended to a ticket because of hostname match")
-    else:
+    elif not service_recovered:
         # create a new ticket
         # replace comment_template with description_template(contains incident template)
         server.ticket.create(summary_template,description_template,{'owner': assign_to_user, 'type': 'Incident', 'priority': 'critical'},mail_notifications)

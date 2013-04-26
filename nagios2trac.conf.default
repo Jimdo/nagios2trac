@@ -1,0 +1,7 @@
+[Trac]
+host=www.sometrac.com
+user=sometracuser
+password=somepassword
+ticket_owner=sometracuser
+# this should be yes or no
+notifications=yes

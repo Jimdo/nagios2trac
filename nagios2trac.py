@@ -4,28 +4,33 @@
 # http://trac-hacks.org/wiki/XmlRpcPlugin
 import xmlrpclib
 import sys
+import ConfigParser
 from optparse import OptionParser
 
 parser = OptionParser()
-parser.add_option("-p", "--password", action="store", type="string", dest="password", help= "trac password")
+
 parser.add_option("--host-name", action="store", type="string", dest="critical_host", help="critical host, reported by nagios")
 parser.add_option("--service-state", action="store", type="string", dest="service_state", help="service state (e.g. CRITICAL, reported by nagios")
 parser.add_option("--description", action="store", type="string", dest="description", help="nagios $SERVICE/HOSTDESC$, will be used in TRAC summary field")
 parser.add_option("--longoutput", action="store", type="string", dest="long_output", help="$LONGSERVICEOUTPUT$, reported by nagios")
 parser.add_option("--list-methods", action="store_true", dest="listmethods", help="list xmlrpc methods")
+parser.add_option("-c", "--config", action="store", type="string", dest="config", default="/etc/nagios3/nagios2trac.conf", help="path to configfile, defaults to /etc/nagios3/nagios2trac.conf")
 ## needed options ##
-# * trac host
-# * trac user
 # * nagios long output / $LONGSERVICEOUTPUT$
-# * nagios $SERVICESTATE$ (CRITICAL/OK/WARNING/UNKNOWN)
-# * SERVICE stuff is needed for HOST too!
 
 (options, args) = parser.parse_args()
 
-# FIXME - beautify
-if options.password is None and not options.listmethods:
-    parser.error("please specify a password")
+# read config
+config = ConfigParser.ConfigParser()
+config.read(options.config)
 
+trac_host=config.get('Trac', 'host')
+trac_user=config.get('Trac', 'user')
+trac_password=config.get('Trac','password')
+trac_owner=config.get('Trac','ticket_owner')
+trac_notifications=config.get('Trac', 'notifications')
+
+# FIXME - beautify
 if options.critical_host is None and not options.listmethods:
     parser.error("please specify a host-name")
 
@@ -36,7 +41,7 @@ if options.description is None and not options.listmethods:
     parser.error("please specify a scription")
 
 ### initialize server ###
-server = xmlrpclib.ServerProxy("http://nagios:%s@tractest01.jimdo.office/trac/login/xmlrpc" % options.password)
+server = xmlrpclib.ServerProxy("http://%s:%s@%s/trac/login/xmlrpc" %(trac_user,trac_password,trac_host))
 multicall = xmlrpclib.MultiCall(server)
 
 if options.listmethods:
@@ -87,15 +92,10 @@ description_template = """=== Incident ===
  * Did a known standard solution work? If not: Document it! e.g. in [wiki:NuetzlicheShell], [wiki:AdminHandbuch]
  * Close the ticket, if no further actions can be derived from it.
 """
-######
 
-mail_notifications=True
-assign_to_user='bonko'
-
-## dont create a new ticket when a service recovers ##
+## dont create a new ticket when a service or host recovers ##
 
 service_recovered = options.service_state.startswith(('OK','UP'))
-
 
 ## search for tickets with same summary_template
 
@@ -105,19 +105,19 @@ open_ticket_with_same_summary=server.ticket.query("summary=" + summary_template 
 
 if open_ticket_with_same_summary:
     # post message to ticket
-    server.ticket.update(open_ticket_with_same_summary[0], comment_template,{},mail_notifications)
+    server.ticket.update(open_ticket_with_same_summary[0], comment_template,{},trac_notifications)
     print("appended to a ticket because of FULL summary match")
 else:
     #elseif tickets open for same $hostname
     open_ticket_for_same_host=server.ticket.query("summary^=[" + options.critical_host + "]&status!=closed")
     if open_ticket_for_same_host:
         # maybe only post if last edit time > 15 min to prevent trac spam when many services of a host fail
-        server.ticket.update(open_ticket_for_same_host[0], comment_template,{},mail_notifications)
+        server.ticket.update(open_ticket_for_same_host[0], comment_template,{},trac_notifications)
         print("appended to a ticket because of hostname match")
     elif not service_recovered:
         # create a new ticket
         # replace comment_template with description_template(contains incident template)
-        server.ticket.create(summary_template,description_template,{'owner': assign_to_user, 'type': 'Incident', 'priority': 'critical'},mail_notifications)
+        server.ticket.create(summary_template,description_template,{'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'},trac_notifications)
         print("created a new ticket")
 
 

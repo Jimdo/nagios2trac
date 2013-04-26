@@ -14,6 +14,8 @@ Usage
 =====
 Define these notification commands
 * service check:
+
         ./nagios2trac.py --service-state "$SERVICESTATE$ $NOTIFICATIONTYPE$" --host-name "$HOSTNAME$" --description "$SERVICEDESC$" --longoutput "$SERVICEOUTPUT$"
 * host check:
+
         ./nagios2trac.py --service-state "$HOSTSTATE$ $NOTIFICATIONTYPE$" --host-name "$HOSTNAME$" --description "" --longoutput "

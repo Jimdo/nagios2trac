@@ -126,37 +126,5 @@ print("reached end")
 sys.exit(1)
 
 #################
-REOPEN_THRESHOLD = datetime.datetime.now() - datetime.timedelta(7)
-MULTISERVICE_FUCKUP_THERSHOLD = datetime.datetime.now() - datetime.timedelta(0, 0, 15)
-
-
-def create_tickets(nagios_input, trac_api):
-    if nagios_input['service_state'] != 'OK':
-        return
-
-    summary = summary_template.format(nagios_input)
-    comment = comment_template.format(nagios_input)
-    description = description_template.format(nagios_input)
-
-    ticket = trac_api.find_ticket_by_summary(summary)
-
-    if ticket:
-        if ticket.status != 'closed':
-            trac_api.post_to_ticket(ticket, comment)
-        else:
-            if ticket.changed < REOPEN_THRESHOLD:
-                trac_api.reopen_ticket(ticket)
-                trac_api.post_to_ticket(ticket, comment)
-            else:
-                trac_api.open_ticket(summary, description)
-
-    else:
-        ticket = trac_api.find_open_ticket_by_host_name(host_name)
-        if ticket and ticket.changed < MULTISERVICE_FUCKUP_THERSHOLD: # we found a fresh and open ticket for this host
-            trac_api.post_to_ticket(ticket, comment)
-        else:
-            trac_api.open_ticket(summary, description)
-
-    trac_api.commit()
-
-create_tickets(nagios_input, server)
+#REOPEN_THRESHOLD = datetime.datetime.now() - datetime.timedelta(7)
+#MULTISERVICE_FUCKUP_THERSHOLD = datetime.datetime.now() - datetime.timedelta(0, 0, 15)

@@ -5,7 +5,7 @@
 import xmlrpclib
 import sys
 import ConfigParser
-import os.path
+import os
 from optparse import OptionParser
 
 parser = OptionParser()
@@ -21,8 +21,10 @@ parser.add_option("-c", "--config", action="store", type="string", dest="config"
 
 (options, args) = parser.parse_args()
 
-if not os.path.exists(options.config):
-    print('configfile "' + options.config + '" does not exist')
+
+if not os.access(options.config,os.R_OK):
+    print('configfile "' + options.config + '" does not exist or is not readable')
+    print("exiting..")
     sys.exit(1)
 
 # read config

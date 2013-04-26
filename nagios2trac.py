@@ -16,6 +16,7 @@ parser.add_option("--description", action="store", type="string", dest="descript
 parser.add_option("--longoutput", action="store", type="string", dest="long_output", help="$LONGSERVICEOUTPUT$, reported by nagios")
 parser.add_option("--list-methods", action="store_true", dest="listmethods", help="list xmlrpc methods")
 parser.add_option("-c", "--config", action="store", type="string", dest="config", default="/etc/nagios3/nagios2trac.conf", help="path to configfile, defaults to /etc/nagios3/nagios2trac.conf")
+parser.add_option("-d", "--debug", action="store_true", dest="debug", help="more verbosive output")
 ## needed options ##
 # * nagios long output / $LONGSERVICEOUTPUT$
 
@@ -26,6 +27,10 @@ if not os.access(options.config,os.R_OK):
     print('configfile "' + options.config + '" does not exist or is not readable')
     print("exiting..")
     sys.exit(1)
+
+def debug_output(output):
+    if options.debug:
+        print(output)
 
 # read config
 config = ConfigParser.ConfigParser()
@@ -113,24 +118,23 @@ open_ticket_with_same_summary=server.ticket.query("summary=" + summary_template 
 if open_ticket_with_same_summary:
     # post message to ticket
     server.ticket.update(open_ticket_with_same_summary[0], comment_template,{},trac_notifications)
-    print("appended to a ticket because of FULL summary match")
+    debug_output("appended to a ticket because of FULL summary match")
 else:
     #elseif tickets open for same $hostname
     open_ticket_for_same_host=server.ticket.query("summary^=[" + options.critical_host + "]&status!=closed")
     if open_ticket_for_same_host:
         # maybe only post if last edit time > 15 min to prevent trac spam when many services of a host fail
         server.ticket.update(open_ticket_for_same_host[0], comment_template,{},trac_notifications)
-        print("appended to a ticket because of hostname match")
+        debug_output("appended to a ticket because of hostname match")
     elif not service_recovered:
         # create a new ticket
-        # replace comment_template with description_template(contains incident template)
         server.ticket.create(summary_template,description_template,{'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'},trac_notifications)
-        print("created a new ticket")
+        debug_output("created a new ticket")
 
 
 
-print("reached end")
-sys.exit(1)
+debug_output("reached end")
+sys.exit(0)
 
 #################
 #REOPEN_THRESHOLD = datetime.datetime.now() - datetime.timedelta(7)

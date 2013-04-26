@@ -5,6 +5,7 @@
 import xmlrpclib
 import sys
 import ConfigParser
+import os.path
 from optparse import OptionParser
 
 parser = OptionParser()
@@ -19,6 +20,10 @@ parser.add_option("-c", "--config", action="store", type="string", dest="config"
 # * nagios long output / $LONGSERVICEOUTPUT$
 
 (options, args) = parser.parse_args()
+
+if not os.path.exists(options.config):
+    print('configfile "' + options.config + '" does not exist')
+    sys.exit(1)
 
 # read config
 config = ConfigParser.ConfigParser()

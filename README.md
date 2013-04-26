@@ -1,8 +1,19 @@
 nagios2trac
 ===========
 
-Let Nagios create TRAC tickets for you
+Let Nagios create or comment TRAC tickets for you
 
 
 Privileges needed for Trac user
 ==============================
+* TICKET\_MODIFY
+* TICKET\_CREATE
+
+
+Usage
+=====
+Define these notification commands
+* service check:
+    ./nagios2trac.py --service-state "$SERVICESTATE$ $NOTIFICATIONTYPE$" --host-name "$HOSTNAME$" --description "$SERVICEDESC$" --longoutput "$SERVICEOUTPUT$"
+* host check:
+    ./nagios2trac.py --service-state "$HOSTSTATE$ $NOTIFICATIONTYPE$" --host-name "$HOSTNAME$" --description "" --longoutput "

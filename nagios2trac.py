@@ -1,4 +1,6 @@
 #!/usr/bin/env python2
+
+# python 2.6
 # http://trac-hacks.org/wiki/XmlRpcPlugin
 import xmlrpclib
 import sys

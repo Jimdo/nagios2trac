@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 # python 2.6
 # http://trac-hacks.org/wiki/XmlRpcPlugin

@@ -1,5 +1,5 @@
 * beautify optparse / listmethods
-* make https connection possible
+* make ssl configurable (e.g. allow http instead of https)
 * outsource description template in an extra file?
 * tests
 

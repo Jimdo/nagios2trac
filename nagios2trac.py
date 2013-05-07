@@ -53,7 +53,7 @@ if options.description is None and not options.listmethods:
     parser.error("please specify a scription")
 
 ### initialize server ###
-server = xmlrpclib.ServerProxy("http://%s:%s@%s/trac/login/xmlrpc" %(trac_user,trac_password,trac_host))
+server = xmlrpclib.ServerProxy("https://%s:%s@%s/trac/login/xmlrpc" %(trac_user,trac_password,trac_host))
 multicall = xmlrpclib.MultiCall(server)
 
 if options.listmethods:

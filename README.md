@@ -8,6 +8,8 @@ Privileges needed for Trac user
 ==============================
 * TICKET\_MODIFY
 * TICKET\_CREATE
+* TICKET\_VIEW
+* XML\_RPC
 
 
 Usage

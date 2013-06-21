@@ -23,7 +23,7 @@ parser.add_option("--list-methods", action="store_true", dest="listmethods", hel
 (options, args) = parser.parse_args()
 
 
-if not os.access(options.config,os.R_OK):
+if not os.access(options.config, os.R_OK):
     print('configfile "' + options.config + '" does not exist or is not readable')
     print("exiting..")
     sys.exit(1)
@@ -33,12 +33,12 @@ if not os.access(options.config,os.R_OK):
 config = ConfigParser.ConfigParser()
 config.read(options.config)
 
-trac_host=config.get('Trac', 'host')
-trac_user=config.get('Trac', 'user')
-trac_password=config.get('Trac','password')
-trac_owner=config.get('Trac','ticket_owner')
-trac_notifications=config.get('Trac', 'notifications')
-trac_new_ticket_threshold=int(config.get('Trac', 'new_ticket_threshold'))
+trac_host = config.get('Trac', 'host')
+trac_user = config.get('Trac', 'user')
+trac_password = config.get('Trac', 'password')
+trac_owner = config.get('Trac', 'ticket_owner')
+trac_notifications = config.get('Trac', 'notifications')
+trac_new_ticket_threshold = int(config.get('Trac', 'new_ticket_threshold'))
 
 # FIXME - beautify
 if options.critical_host is None and not options.listmethods:
@@ -54,7 +54,7 @@ if options.description is None and not options.listmethods:
 new_ticket_threshold = options.new_ticket_threshold or trac_new_ticket_threshold
 
 ### initialize server ###
-server = xmlrpclib.ServerProxy("https://%s:%s@%s/trac/login/xmlrpc" %(trac_user,trac_password,trac_host))
+server = xmlrpclib.ServerProxy("https://%s:%s@%s/trac/login/xmlrpc" % (trac_user, trac_password, trac_host))
 multicall = xmlrpclib.MultiCall(server)
 
 if options.listmethods:
@@ -70,16 +70,20 @@ if options.listmethods:
     sys.exit(1)
 
 ### functions ###
+
+
 def debug_output(output):
     if options.debug:
         print('debug: ' + output)
 
+
 def create_ticket():
-    server.ticket.create(summary_template,description_template,{'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'},trac_notifications)
+    server.ticket.create(summary_template, description_template, {'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'}, trac_notifications)
     debug_output("created a new ticket with summary:" + summary_template + "and owner" + trac_owner)
 
+
 def update_ticket(ticket_id):
-    server.ticket.update(ticket_id, comment_template,{},trac_notifications)
+    server.ticket.update(ticket_id, comment_template, {}, trac_notifications)
     debug_output("update ticket %d" % ticket_id)
 ### /functions ###
 
@@ -121,13 +125,13 @@ description_template = """=== Incident ===
 
 ## dont create a new ticket when a service or host recovers ##
 
-service_recovered = options.service_state.startswith(('OK','UP'))
+service_recovered = options.service_state.startswith(('OK', 'UP'))
 
 ## search for tickets with same summary_template
 
 # ticket ids that contain the same summary and are not closed! (e.g. an incident that happened already not long time ago
 # if there is more than 1 matching ticket, use the one with the highest id
-open_ticket_with_same_summary=server.ticket.query("summary=" + summary_template + "&status!=closed")
+open_ticket_with_same_summary = server.ticket.query("summary=" + summary_template + "&status!=closed")
 
 if open_ticket_with_same_summary:
     # post message to ticket
@@ -135,15 +139,15 @@ if open_ticket_with_same_summary:
     debug_output("appended to ticket #%d because of FULL summary match" % open_ticket_with_same_summary[0])
 else:
     #elseif tickets open for same $hostname
-    open_ticket_for_same_host=server.ticket.query("summary^=[" + options.critical_host + "]&status!=closed")
+    open_ticket_for_same_host = server.ticket.query("summary^=[" + options.critical_host + "]&status!=closed")
     if open_ticket_for_same_host:
         # check last modified time of existing ticket
-        last_modified_utc=server.ticket.get(open_ticket_for_same_host[0])[2]
+        last_modified_utc = server.ticket.get(open_ticket_for_same_host[0])[2]
 
         # we need the localtime in utc too
-        current_time_utc=datetime.datetime.utcnow()
+        current_time_utc = datetime.datetime.utcnow()
 
-        current_time_minus_threshold=current_time_utc-datetime.timedelta(minutes=new_ticket_threshold)
+        current_time_minus_threshold = current_time_utc-datetime.timedelta(minutes=new_ticket_threshold)
 
         if last_modified_utc < current_time_minus_threshold:
             debug_output("creating a new ticket because old one has not been modified for more than configured threshold value (%d) minutes" % new_ticket_threshold)

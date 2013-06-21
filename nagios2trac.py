@@ -6,6 +6,7 @@ import xmlrpclib
 import sys
 import ConfigParser
 import os
+import datetime
 from optparse import OptionParser
 
 parser = OptionParser()
@@ -14,9 +15,10 @@ parser.add_option("--host-name", action="store", type="string", dest="critical_h
 parser.add_option("--service-state", action="store", type="string", dest="service_state", help="service state (e.g. CRITICAL, reported by nagios")
 parser.add_option("--description", action="store", type="string", dest="description", help="nagios $SERVICE/HOSTDESC$, will be used in TRAC summary field")
 parser.add_option("--longoutput", action="store", type="string", dest="long_output", help="$LONGSERVICEOUTPUT$, reported by nagios")
-parser.add_option("--list-methods", action="store_true", dest="listmethods", help="list xmlrpc methods")
 parser.add_option("-c", "--config", action="store", type="string", dest="config", default="/etc/nagios3/nagios2trac.conf", help="path to configfile, defaults to /etc/nagios3/nagios2trac.conf")
 parser.add_option("-d", "--debug", action="store_true", dest="debug", help="more verbosive output")
+parser.add_option("--new-ticket-threshold", action="store", type="int", dest="new_ticket_threshold", help="create a new ticket if existing one has not been modified since <int> minutes")
+parser.add_option("--list-methods", action="store_true", dest="listmethods", help="list xmlrpc methods (debug)")
 
 (options, args) = parser.parse_args()
 
@@ -36,6 +38,7 @@ trac_user=config.get('Trac', 'user')
 trac_password=config.get('Trac','password')
 trac_owner=config.get('Trac','ticket_owner')
 trac_notifications=config.get('Trac', 'notifications')
+trac_new_ticket_threshold=int(config.get('Trac', 'new_ticket_threshold'))
 
 # FIXME - beautify
 if options.critical_host is None and not options.listmethods:
@@ -46,6 +49,12 @@ if options.service_state is None and not options.listmethods:
 
 if options.description is None and not options.listmethods:
     parser.error("please specify a scription")
+
+# prefer cli option over configfile
+if options.new_ticket_threshold is not None:
+    new_ticket_threshold=options.new_ticket_threshold
+else:
+    new_ticket_threshold=trac_new_ticket_threshold
 
 ### initialize server ###
 server = xmlrpclib.ServerProxy("https://%s:%s@%s/trac/login/xmlrpc" %(trac_user,trac_password,trac_host))
@@ -123,23 +132,30 @@ open_ticket_with_same_summary=server.ticket.query("summary=" + summary_template 
 if open_ticket_with_same_summary:
     # post message to ticket
     server.ticket.update(open_ticket_with_same_summary[0], comment_template,{},trac_notifications)
-    debug_output("appended to a ticket because of FULL summary match")
+    debug_output("appended to ticket #%d because of FULL summary match" % open_ticket_with_same_summary[0])
 else:
     #elseif tickets open for same $hostname
     open_ticket_for_same_host=server.ticket.query("summary^=[" + options.critical_host + "]&status!=closed")
     if open_ticket_for_same_host:
-        # maybe only post if last edit time > 15 min to prevent trac spam when many services of a host fail
-        server.ticket.update(open_ticket_for_same_host[0], comment_template,{},trac_notifications)
-        debug_output("appended to a ticket because of hostname match")
+        # check last modified time of existing ticket
+        last_modified_utc=server.ticket.get(open_ticket_for_same_host[0])[2]
+
+        # we need the localtime in utc too
+        current_time_utc=datetime.datetime.utcnow()
+        current_time_utc_trac_formatted=current_time_utc.strftime("%Y%m%dT%H:%M:%S")
+
+        current_time_minus_threshold=current_time_utc-datetime.timedelta(minutes=new_ticket_threshold)
+
+        if last_modified_utc < current_time_minus_threshold:
+            debug_output("creating a new ticket because old one has not been modified for more than configured threshold value (%d) minutes" % new_ticket_threshold)
+            create_ticket()
+        else:
+            # maybe only post if last edit time > 15 min to prevent trac spam when many services of a host fail
+            server.ticket.update(open_ticket_for_same_host[0], comment_template,{},trac_notifications)
+            debug_output("appended to ticket #%d because of hostname match" % open_ticket_for_same_host[0])
     elif not service_recovered:
         debug_output("creating a new ticket")
         create_ticket()
 
-
-
 debug_output("reached end")
 sys.exit(0)
-
-#################
-#REOPEN_THRESHOLD = datetime.datetime.now() - datetime.timedelta(7)
-#MULTISERVICE_FUCKUP_THERSHOLD = datetime.datetime.now() - datetime.timedelta(0, 0, 15)

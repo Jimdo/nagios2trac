@@ -51,10 +51,7 @@ if options.description is None and not options.listmethods:
     parser.error("please specify a scription")
 
 # prefer cli option over configfile
-if options.new_ticket_threshold is not None:
-    new_ticket_threshold=options.new_ticket_threshold
-else:
-    new_ticket_threshold=trac_new_ticket_threshold
+new_ticket_threshold = options.new_ticket_threshold or trac_new_ticket_threshold
 
 ### initialize server ###
 server = xmlrpclib.ServerProxy("https://%s:%s@%s/trac/login/xmlrpc" %(trac_user,trac_password,trac_host))

@@ -142,7 +142,6 @@ else:
 
         # we need the localtime in utc too
         current_time_utc=datetime.datetime.utcnow()
-        current_time_utc_trac_formatted=current_time_utc.strftime("%Y%m%dT%H:%M:%S")
 
         current_time_minus_threshold=current_time_utc-datetime.timedelta(minutes=new_ticket_threshold)
 

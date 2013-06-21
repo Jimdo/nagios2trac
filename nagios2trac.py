@@ -78,6 +78,9 @@ def create_ticket():
     server.ticket.create(summary_template,description_template,{'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'},trac_notifications)
     debug_output("created a new ticket with summary:" + summary_template + "and owner" + trac_owner)
 
+def update_ticket(ticket_id):
+    server.ticket.update(ticket_id, comment_template,{},trac_notifications)
+    debug_output("update ticket %d" % ticket_id)
 ### /functions ###
 
 #######
@@ -128,7 +131,7 @@ open_ticket_with_same_summary=server.ticket.query("summary=" + summary_template 
 
 if open_ticket_with_same_summary:
     # post message to ticket
-    server.ticket.update(open_ticket_with_same_summary[0], comment_template,{},trac_notifications)
+    update_ticket(open_ticket_with_same_summary[0])
     debug_output("appended to ticket #%d because of FULL summary match" % open_ticket_with_same_summary[0])
 else:
     #elseif tickets open for same $hostname
@@ -146,8 +149,7 @@ else:
             debug_output("creating a new ticket because old one has not been modified for more than configured threshold value (%d) minutes" % new_ticket_threshold)
             create_ticket()
         else:
-            # maybe only post if last edit time > 15 min to prevent trac spam when many services of a host fail
-            server.ticket.update(open_ticket_for_same_host[0], comment_template,{},trac_notifications)
+            update_ticket(open_ticket_for_same_host[0])
             debug_output("appended to ticket #%d because of hostname match" % open_ticket_for_same_host[0])
     elif not service_recovered:
         debug_output("creating a new ticket")

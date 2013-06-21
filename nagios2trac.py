@@ -17,8 +17,6 @@ parser.add_option("--longoutput", action="store", type="string", dest="long_outp
 parser.add_option("--list-methods", action="store_true", dest="listmethods", help="list xmlrpc methods")
 parser.add_option("-c", "--config", action="store", type="string", dest="config", default="/etc/nagios3/nagios2trac.conf", help="path to configfile, defaults to /etc/nagios3/nagios2trac.conf")
 parser.add_option("-d", "--debug", action="store_true", dest="debug", help="more verbosive output")
-## needed options ##
-# * nagios long output / $LONGSERVICEOUTPUT$
 
 (options, args) = parser.parse_args()
 
@@ -28,9 +26,6 @@ if not os.access(options.config,os.R_OK):
     print("exiting..")
     sys.exit(1)
 
-def debug_output(output):
-    if options.debug:
-        print(output)
 
 # read config
 config = ConfigParser.ConfigParser()
@@ -68,6 +63,16 @@ if options.listmethods:
         print
     sys.exit(1)
 
+### functions ###
+def debug_output(output):
+    if options.debug:
+        print('debug: ' + output)
+
+def create_ticket():
+    server.ticket.create(summary_template,description_template,{'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'},trac_notifications)
+    debug_output("created a new ticket with summary:" + summary_template + "and owner" + trac_owner)
+
+### /functions ###
 
 #######
 summary_template = "[" + options.critical_host + "] " + options.service_state + ": " + options.description
@@ -127,9 +132,8 @@ else:
         server.ticket.update(open_ticket_for_same_host[0], comment_template,{},trac_notifications)
         debug_output("appended to a ticket because of hostname match")
     elif not service_recovered:
-        # create a new ticket
-        server.ticket.create(summary_template,description_template,{'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'},trac_notifications)
-        debug_output("created a new ticket")
+        debug_output("creating a new ticket")
+        create_ticket()
 
 
 

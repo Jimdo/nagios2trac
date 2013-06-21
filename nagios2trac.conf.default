@@ -5,3 +5,7 @@ password=somepassword
 ticket_owner=sometracuser
 # this should be yes or no
 notifications=yes
+# if an open ticket with a different description is found for the host is found
+# only post to it if last edit is time is < new_ticket_threshold minutes.
+# otherwise create a new ticket
+new_ticket_threshold=120

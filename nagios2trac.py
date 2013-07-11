@@ -95,7 +95,11 @@ def update_ticket(ticket_id):
 
 #######
 summary_template = "[" + options.critical_host + "] " + options.service_state + ": " + options.description
-comment_template = "{{{ \n[" + options.critical_host + "] " + options.service_state + ": " + options.description + "\n" + options.long_output + "\n}}}"
+# optparser escapes \n, so it is not possible to add newlines into the longoutput that are actually interpreted by trac
+# we workaround this by "unescaping" all escaped \n
+# this is only needed inside comment_template because the trac summary can online contain a single line
+comment_template_plain = "{{{ \n[" + options.critical_host + "] " + options.service_state + ": " + options.description + "\n" + options.long_output + "\n}}}"
+comment_template = comment_template_plain.replace('\\n', '\n')
 description_template = """=== Incident ===
  * Does it affect only one user/colleague? Not an incident, normal support case.
  * What has been noticed? (e.g. nagios check + host that failed)

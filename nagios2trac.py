@@ -79,8 +79,14 @@ def debug_output(output):
 
 def create_ticket():
     server.ticket.create(summary_template, description_template, {'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'}, trac_notifications)
-    debug_output("created a new ticket with summary:" + summary_template + "and owner" + trac_owner)
+    debug_output("created a new ticket with summary:" + summary_template + " and owner " + trac_owner)
 
+def create_ticket_if_not_recovered():
+    if not service_recovered:
+        debug_output("service or host not recovered. creating a new ticket")
+        create_ticket()
+    else:
+        debug_output("service or host recovered, though not creating a new ticket")
 
 def update_ticket(ticket_id):
     server.ticket.update(ticket_id, comment_template, {}, trac_notifications)
@@ -123,7 +129,7 @@ description_template = """=== Incident ===
  * Close the ticket, if no further actions can be derived from it.
 """
 
-## dont create a new ticket when a service or host recovers ##
+## it this a recovery message? ##
 
 service_recovered = options.service_state.startswith(('OK', 'UP'))
 
@@ -150,14 +156,14 @@ else:
         current_time_minus_threshold = current_time_utc-datetime.timedelta(minutes=new_ticket_threshold)
 
         if last_modified_utc < current_time_minus_threshold:
-            debug_output("creating a new ticket because old one has not been modified for more than configured threshold value (%d) minutes" % new_ticket_threshold)
-            create_ticket()
+            debug_output("ticket has not been modified for more than the configured threshold value (%d) minutes, trying to create a new one" % new_ticket_threshold)
+            create_ticket_if_not_recovered()
         else:
             update_ticket(open_ticket_for_same_host[0])
             debug_output("appended to ticket #%d because of hostname match" % open_ticket_for_same_host[0])
-    elif not service_recovered:
+    else:
         debug_output("creating a new ticket")
-        create_ticket()
+        create_ticket_if_not_recovered()
 
 debug_output("reached end")
 sys.exit(0)

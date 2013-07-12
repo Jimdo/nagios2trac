@@ -9,6 +9,11 @@ import os
 import datetime
 from optparse import OptionParser
 
+SERVER = None
+TRAC_NOTIFICATIONS = None
+COMMENT_TEMPLATE = None
+
+
 def get_options_and_args(argv):
     parser = OptionParser()
 
@@ -43,28 +48,30 @@ def debug_output(output):
         print('debug: ' + output)
 
 
-def create_ticket():
-    server.ticket.create(summary_template, description_template, {'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'}, trac_notifications)
+def create_ticket(summary_template, description_template, trac_owner):
+    SERVER.ticket.create(summary_template, description_template, {'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'}, TRAC_NOTIFICATIONS)
     debug_output("created a new ticket with summary:" + summary_template + " and owner " + trac_owner)
 
-def create_ticket_if_not_recovered():
+
+def create_ticket_if_not_recovered(summary_template, description_template, trac_owner, service_recovered):
     if not service_recovered:
         debug_output("service or host not recovered. creating a new ticket")
-        create_ticket()
+        create_ticket(summary_template, description_template, trac_owner)
     else:
         debug_output("service or host recovered, though not creating a new ticket")
 
-def update_ticket(ticket_id):
-    server.ticket.update(ticket_id, comment_template, {}, trac_notifications)
-    debug_output("update ticket %d" % ticket_id)
-### /functions ###
-def main(options, args):
 
+def update_ticket(ticket_id):
+    SERVER.ticket.update(ticket_id, COMMENT_TEMPLATE, {}, TRAC_NOTIFICATIONS)
+    debug_output("update ticket %d" % ticket_id)
+
+
+def read_config(options):
+    global TRAC_NOTIFICATIONS
     if not os.access(options.config, os.R_OK):
         print('configfile "' + options.config + '" does not exist or is not readable')
         print("exiting..")
         sys.exit(1)
-
 
     # read config
     config = ConfigParser.ConfigParser()
@@ -74,41 +81,53 @@ def main(options, args):
     trac_user = config.get('Trac', 'user')
     trac_password = config.get('Trac', 'password')
     trac_owner = config.get('Trac', 'ticket_owner')
-    trac_notifications = config.get('Trac', 'notifications')
+    TRAC_NOTIFICATIONS = config.get('Trac', 'notifications')
     trac_new_ticket_threshold = int(config.get('Trac', 'new_ticket_threshold'))
 
+    return trac_host, trac_user, trac_password, trac_owner, trac_new_ticket_threshold
+
+
+def list_methods():
+    multicall = xmlrpclib.MultiCall(SERVER)
+
+    # FIXME make me a function
+    for method in SERVER.system.listMethods():
+        multicall.system.methodHelp(method)
+
+    for help in multicall():
+        lines = help.splitlines()
+        print lines[0]
+        print '\n'.join(['  ' + x for x in lines[2:]])
+        print
+
+
+### /functions ###
+
+def main(options, args):
+    global SERVER, COMMENT_TEMPLATE
+    trac_host, trac_user, trac_password, trac_owner, trac_new_ticket_threshold = read_config(options)
 
     # prefer cli option over configfile
     new_ticket_threshold = options.new_ticket_threshold or trac_new_ticket_threshold
 
-    ### initialize server ###
-    server = xmlrpclib.ServerProxy("https://%s:%s@%s/trac/login/xmlrpc" % (trac_user, trac_password, trac_host))
-    multicall = xmlrpclib.MultiCall(server)
+    ### initialize SERVER ###
+    SERVER = xmlrpclib.ServerProxy("https://%s:%s@%s/trac/login/xmlrpc" % (trac_user, trac_password, trac_host))
 
     if options.listmethods:
-        # FIXME make me a function
-        for method in server.system.listMethods():
-            multicall.system.methodHelp(method)
-
-        for help in multicall():
-            lines = help.splitlines()
-            print lines[0]
-            print '\n'.join(['  ' + x for x in lines[2:]])
-            print
+        list_methods()
         sys.exit(1)
-
 
     #######
     summary_template = "[" + options.critical_host + "] " + options.service_state + ": " + options.description
     # optparser escapes \n, so it is not possible to add newlines into the longoutput that are actually interpreted by trac
     # we workaround this by "unescaping" all escaped \n
-    # this is only needed inside comment_template because the trac summary can online contain a single line
+    # this is only needed inside COMMENT_TEMPLATE because the trac summary can online contain a single line
     comment_template_plain = "{{{ \n[" + options.critical_host + "] " + options.service_state + ": " + options.description + "\n" + options.long_output + "\n}}}"
-    comment_template = comment_template_plain.replace('\\n', '\n')
+    COMMENT_TEMPLATE = comment_template_plain.replace('\\n', '\n')
     description_template = """=== Incident ===
     * Does it affect only one user/colleague? Not an incident, normal support case.
     * What has been noticed? (e.g. nagios check + host that failed)
-    """ + comment_template + """
+    """ + COMMENT_TEMPLATE + """
     * Who is affected? (all users, limited set of users, departments, partners, ...)
     * When did it start? (e.g. nagios reported time)
     * How did you notice it (Monitoring, Support..?)
@@ -146,7 +165,7 @@ def main(options, args):
 
     # ticket ids that contain the same summary and are not closed! (e.g. an incident that happened already not long time ago
     # if there is more than 1 matching ticket, use the one with the highest id
-    open_ticket_with_same_summary = server.ticket.query("summary=" + summary_template + "&status!=closed")
+    open_ticket_with_same_summary = SERVER.ticket.query("summary=" + summary_template + "&status!=closed")
 
     if open_ticket_with_same_summary:
         # post message to ticket
@@ -154,25 +173,25 @@ def main(options, args):
         debug_output("appended to ticket #%d because of FULL summary match" % open_ticket_with_same_summary[0])
     else:
         #elseif tickets open for same $hostname
-        open_ticket_for_same_host = server.ticket.query("summary^=[" + options.critical_host + "]&status!=closed")
+        open_ticket_for_same_host = SERVER.ticket.query("summary^=[" + options.critical_host + "]&status!=closed")
         if open_ticket_for_same_host:
             # check last modified time of existing ticket
-            last_modified_utc = server.ticket.get(open_ticket_for_same_host[0])[2]
+            last_modified_utc = SERVER.ticket.get(open_ticket_for_same_host[0])[2]
 
             # we need the localtime in utc too
             current_time_utc = datetime.datetime.utcnow()
 
-            current_time_minus_threshold = current_time_utc-datetime.timedelta(minutes=new_ticket_threshold)
+            current_time_minus_threshold = current_time_utc - datetime.timedelta(minutes=new_ticket_threshold)
 
             if last_modified_utc < current_time_minus_threshold:
                 debug_output("ticket has not been modified for more than the configured threshold value (%d) minutes, trying to create a new one" % new_ticket_threshold)
-                create_ticket_if_not_recovered()
+                create_ticket_if_not_recovered(summary_template, description_template, trac_owner, service_recovered)
             else:
                 update_ticket(open_ticket_for_same_host[0])
                 debug_output("appended to ticket #%d because of hostname match" % open_ticket_for_same_host[0])
         else:
             debug_output("creating a new ticket")
-            create_ticket_if_not_recovered()
+            create_ticket_if_not_recovered(summary_template, description_template, trac_owner, service_recovered)
 
     debug_output("reached end")
     sys.exit(0)

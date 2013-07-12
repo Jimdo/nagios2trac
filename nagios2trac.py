@@ -8,6 +8,7 @@ import ConfigParser
 import os
 import datetime
 from optparse import OptionParser
+import logging
 
 SERVER = None
 TRAC_NOTIFICATIONS = None
@@ -36,7 +37,13 @@ def get_options_and_args(argv):
         parser.error("please specify a service-state")
 
     if options.description is None and not options.listmethods:
-        parser.error("please specify a scription")
+        parser.error("please specify a description")
+
+    if options.long_output is None and not options.listmethods:
+        parser.error("please specify a longoutput")
+
+    if options.debug:
+        logging.getLogger().level = logging.DEBUG
 
     return options, args
 
@@ -44,8 +51,7 @@ def get_options_and_args(argv):
 
 
 def debug_output(output):
-    if options.debug:
-        print('debug: ' + output)
+    logging.debug(output)
 
 
 def create_ticket(summary_template, description_template, trac_owner):
@@ -194,8 +200,8 @@ def main(options, args):
             create_ticket_if_not_recovered(summary_template, description_template, trac_owner, service_recovered)
 
     debug_output("reached end")
-    sys.exit(0)
 
 if __name__ == "__main__":
     options, args = get_options_and_args(sys.argv[1:])
     main(options, args)
+    sys.exit(0)

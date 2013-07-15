@@ -171,7 +171,7 @@ def main(options, args):
 
     # ticket ids that contain the same summary and are not closed! (e.g. an incident that happened already not long time ago
     # if there is more than 1 matching ticket, use the one with the highest id
-    open_ticket_with_same_summary = SERVER.ticket.query("summary=" + summary_template + "&status!=closed")
+    open_ticket_with_same_summary = SERVER.ticket.query("summary=" + summary_template + "&status!=closed&order=id&desc=true")
 
     if open_ticket_with_same_summary:
         # post message to ticket
@@ -179,7 +179,7 @@ def main(options, args):
         debug_output("appended to ticket #%d because of FULL summary match" % open_ticket_with_same_summary[0])
     else:
         #elseif tickets open for same $hostname
-        open_ticket_for_same_host = SERVER.ticket.query("summary^=[" + options.critical_host + "]&status!=closed")
+        open_ticket_for_same_host = SERVER.ticket.query("summary^=[" + options.critical_host + "]&status!=closed&order=id&desc=true")
         if open_ticket_for_same_host:
             # check last modified time of existing ticket
             last_modified_utc = SERVER.ticket.get(open_ticket_for_same_host[0])[2]

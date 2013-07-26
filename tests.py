@@ -11,12 +11,10 @@ class TestNagios2Trac(unittest.TestCase):
     def setUp(self):
         import nagios2trac
         self.nagios2trac = nagios2trac
-        self.options_dict = {'--host-name': 'myhost', '--service-state': 'CRITICAL', '--description': 'myservice running', '--longoutput': 'loooong'}
+        self.options_dict = {'--host-name': 'myhost', '--service-state': 'CRITICAL', '--description': 'myservice running', '--longoutput': 'loooong', '--config': 'nagios2trac.conf.default' }
         # convert dict to flat list
         options_list = list(itertools.chain(*self.options_dict.items()))
         self.options, self.args = self.nagios2trac.get_options_and_args(options_list)
-        self.nagios2trac.read_config = Mock()
-        self.nagios2trac.read_config.return_value = [1, 2, 3, 4, 5]
         self.nagios2trac.xmlrpclib = Mock()
         self.nagios2trac.update_ticket = Mock()
         self.nagios2trac.create_ticket = Mock()

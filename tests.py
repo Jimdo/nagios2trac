@@ -22,6 +22,28 @@ class TestNagios2Trac(unittest.TestCase):
         self._stderr = sys.stderr
         sys.stderr = StringIO()
 
+    def testNeedsHostname(self):
+        try:
+            del self.options_dict['--host-name']
+            options_list = list(itertools.chain(*self.options_dict.items()))
+            self.nagios2trac.get_options_and_args(options_list)
+        except SystemExit, e:
+            self.assertEquals(e.code, 2)
+            self.assertTrue('error: please specify a host-name' in sys.stderr.getvalue())
+        else:
+            self.fail('Did not raise SystemExit')
+
+    def testNeedsServicestate(self):
+        try:
+            del self.options_dict['--service-state']
+            options_list = list(itertools.chain(*self.options_dict.items()))
+            self.nagios2trac.get_options_and_args(options_list)
+        except SystemExit, e:
+            self.assertEquals(e.code, 2)
+            self.assertTrue('error: please specify a service-state' in sys.stderr.getvalue())
+        else:
+            self.fail('Did not raise SystemExit')
+
     def testNeedsDescription(self):
         try:
             del self.options_dict['--description']

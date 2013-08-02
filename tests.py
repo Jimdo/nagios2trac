@@ -13,11 +13,18 @@ class TestFunctions(unittest.TestCase):
         import nagios2trac
         self.nagios2trac = nagios2trac
         self.nagios2trac.SERVER = Mock()
+        self.options_dict = {'--host-name': 'myhost', '--service-state': 'CRITICAL', '--description': 'myservice running', '--longoutput': 'loooong', '--config': 'nagios2trac.conf.default'}
+        options_list = list(itertools.chain(*self.options_dict.items()))
+        self.options, self.args = self.nagios2trac.get_options_and_args(options_list)
         self.summary_template = '[myhost] CRITICAL: myservice running'
 
     def testOpenTicketWithSameSummary(self):
         self.nagios2trac.open_ticket_with_same_summary(self.summary_template)
         self.nagios2trac.SERVER.ticket.query.assert_called_with("summary=" + self.summary_template + "&status!=closed&order=id&desc=true")
+
+    def testOpenTicketForSameHost(self):
+        self.nagios2trac.open_ticket_for_same_host(self.options.critical_host)
+        self.nagios2trac.SERVER.ticket.query.assert_called_with("summary^=[" + self.options.critical_host + "]&status!=closed&order=id&desc=true")
 
 
 class TestNagios2Trac(unittest.TestCase):
@@ -33,9 +40,11 @@ class TestNagios2Trac(unittest.TestCase):
         self.nagios2trac.update_ticket = Mock()
         self.nagios2trac.create_ticket = Mock()
         self.nagios2trac.open_ticket_with_same_summary = Mock()
+        self.nagios2trac.open_ticket_for_same_host = Mock()
         self.nagios2trac.create_ticket_if_not_recovered = Mock()
         self._stderr = sys.stderr
         sys.stderr = StringIO()
+        self.trac_owner = 'sometracuser'
         self.summary_template = '[myhost] CRITICAL: myservice running'
         self.comment_template_plain = "{{{ \n[myhost] CRITICAL: myservice running\nloooong\n}}}"
         self.COMMENT_TEMPLATE = self.comment_template_plain.replace('\\n', '\n')
@@ -127,18 +136,32 @@ class TestNagios2Trac(unittest.TestCase):
 #        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.return_value = []
 #        self.nagios2trac.main(self.options, self.args)
 #        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.return_value = [12]
+#        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.assert_called_with("summary^=[myhost]&status!=closed&order=id&desc=true")
+#        # last_modified_utc, eg. 20111122T08:54:05
+#        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.return_value = ['20130726T14:54:05']
+#        print self.new_ticket_threshold
+#        self.nagios2trac.create_ticket_if_not_recovered.assert_called_with(self.summary_template, self.description_template, self.trac_owner, service_recovered)
 
-#    def testFoundOpenTicketForSameHostWithinThreshold(self):
-#
-    def testFoundNoMatchingOpenTicket(self):
-        # is there a better way to define this?
-        trac_owner = 'sometracuser'
-        service_recovered=False
-        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.return_value = []
+    def testFoundOpenTicketForSameHostWithinThreshold(self):
+        service_recovered = False
+        self.nagios2trac.open_ticket_with_same_summary.return_value = []
+        self.nagios2trac.open_ticket_for_same_host.return_value = [12]
+        # Timestamp of now to stay in threshold
+        self.nagios2trac.xmlrpclib.ServerProxy().ticket.get.return_value = [0, 0, datetime.datetime.utcnow()]
         self.nagios2trac.main(self.options, self.args)
-        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.return_value = []
-        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.assert_called_with("summary^=[myhost]&status!=closed&order=id&desc=true")
-        self.nagios2trac.create_ticket_if_not_recovered.assert_called_with(self.summary_template,self.description_template,trac_owner,service_recovered)
+        self.nagios2trac.open_ticket_for_same_host.assert_called_with(self.options.critical_host)
+        # use current time to be within threshold
+        self.nagios2trac.xmlrpclib.ServerProxy().ticket.get.assert_called_with(12)
+
+        self.nagios2trac.update_ticket.assert_called_with(12)
+
+    def testFoundNoMatchingOpenTicket(self):
+        service_recovered = False
+        self.nagios2trac.open_ticket_with_same_summary.return_value = []
+        self.nagios2trac.open_ticket_for_same_host.return_value = []
+        self.nagios2trac.main(self.options, self.args)
+        self.nagios2trac.open_ticket_for_same_host.assert_called_with(self.options.critical_host)
+        self.nagios2trac.create_ticket_if_not_recovered.assert_called_with(self.summary_template, self.description_template, self.trac_owner, service_recovered)
 
     def tearDown(self):
         sys.stderr = self._stderr

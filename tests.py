@@ -45,6 +45,7 @@ class TestNagios2Trac(unittest.TestCase):
         self._stderr = sys.stderr
         sys.stderr = StringIO()
         self.trac_owner = 'sometracuser'
+        self.new_ticket_threshold = 120
         self.summary_template = '[myhost] CRITICAL: myservice running'
         self.comment_template_plain = "{{{ \n[myhost] CRITICAL: myservice running\nloooong\n}}}"
         self.COMMENT_TEMPLATE = self.comment_template_plain.replace('\\n', '\n')
@@ -131,16 +132,15 @@ class TestNagios2Trac(unittest.TestCase):
         self.nagios2trac.open_ticket_with_same_summary.assert_called_with(self.summary_template)
         self.nagios2trac.update_ticket.assert_called_with(1337)
 
-#    def testFoundOpenTicketForSameHostWithThresholdExceeded(self):
-#        summary_template = '[myhost] CRITICAL: myotherservice running'
-#        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.return_value = []
-#        self.nagios2trac.main(self.options, self.args)
-#        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.return_value = [12]
-#        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.assert_called_with("summary^=[myhost]&status!=closed&order=id&desc=true")
-#        # last_modified_utc, eg. 20111122T08:54:05
-#        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.return_value = ['20130726T14:54:05']
-#        print self.new_ticket_threshold
-#        self.nagios2trac.create_ticket_if_not_recovered.assert_called_with(self.summary_template, self.description_template, self.trac_owner, service_recovered)
+    def testFoundOpenTicketForSameHostWithThresholdExceeded(self):
+        service_recovered = False
+        self.nagios2trac.open_ticket_with_same_summary.return_value = []
+        self.nagios2trac.open_ticket_for_same_host.return_value = [12]
+        # ensure that last modified time exceededs threshold
+        self.nagios2trac.xmlrpclib.ServerProxy().ticket.get.return_value = [0, 0, datetime.datetime.utcnow() - datetime.timedelta(minutes=self.new_ticket_threshold + 10)]
+        self.nagios2trac.main(self.options, self.args)
+
+        self.nagios2trac.create_ticket_if_not_recovered.assert_called_with(self.summary_template, self.description_template, self.trac_owner, service_recovered)
 
     def testFoundOpenTicketForSameHostWithinThreshold(self):
         service_recovered = False

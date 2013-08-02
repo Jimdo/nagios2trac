@@ -2,8 +2,22 @@ import unittest
 from StringIO import StringIO
 import sys
 import itertools
+import datetime
 
 from mock import Mock
+
+
+class TestFunctions(unittest.TestCase):
+
+    def setUp(self):
+        import nagios2trac
+        self.nagios2trac = nagios2trac
+        self.nagios2trac.SERVER = Mock()
+        self.summary_template = '[myhost] CRITICAL: myservice running'
+
+    def testOpenTicketWithSameSummary(self):
+        self.nagios2trac.open_ticket_with_same_summary(self.summary_template)
+        self.nagios2trac.SERVER.ticket.query.assert_called_with("summary=" + self.summary_template + "&status!=closed&order=id&desc=true")
 
 
 class TestNagios2Trac(unittest.TestCase):
@@ -11,13 +25,14 @@ class TestNagios2Trac(unittest.TestCase):
     def setUp(self):
         import nagios2trac
         self.nagios2trac = nagios2trac
-        self.options_dict = {'--host-name': 'myhost', '--service-state': 'CRITICAL', '--description': 'myservice running', '--longoutput': 'loooong', '--config': 'nagios2trac.conf.default' }
+        self.options_dict = {'--host-name': 'myhost', '--service-state': 'CRITICAL', '--description': 'myservice running', '--longoutput': 'loooong', '--config': 'nagios2trac.conf.default'}
         # convert dict to flat list
         options_list = list(itertools.chain(*self.options_dict.items()))
         self.options, self.args = self.nagios2trac.get_options_and_args(options_list)
         self.nagios2trac.xmlrpclib = Mock()
         self.nagios2trac.update_ticket = Mock()
         self.nagios2trac.create_ticket = Mock()
+        self.nagios2trac.open_ticket_with_same_summary = Mock()
         self.nagios2trac.create_ticket_if_not_recovered = Mock()
         self._stderr = sys.stderr
         sys.stderr = StringIO()
@@ -56,7 +71,6 @@ class TestNagios2Trac(unittest.TestCase):
     * Did a known standard solution work? If not: Document it! e.g. in [wiki:NuetzlicheShell], [wiki:AdminHandbuch]
     * Close the ticket, if no further actions can be derived from it.
     """
-
 
     def testNeedsHostname(self):
         try:
@@ -103,9 +117,9 @@ class TestNagios2Trac(unittest.TestCase):
             self.fail('Did not raise SystemExit')
 
     def testFoundOpenTicketWithSameSummary(self):
-        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.return_value = [1337]
+        self.nagios2trac.open_ticket_with_same_summary.return_value = [1337]
         self.nagios2trac.main(self.options, self.args)
-        self.nagios2trac.xmlrpclib.ServerProxy().ticket.query.assert_called_with("summary=" + self.summary_template + "&status!=closed&order=id&desc=true")
+        self.nagios2trac.open_ticket_with_same_summary.assert_called_with(self.summary_template)
         self.nagios2trac.update_ticket.assert_called_with(1337)
 
 #    def testFoundOpenTicketForSameHostWithThresholdExceeded(self):

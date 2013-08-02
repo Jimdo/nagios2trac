@@ -107,7 +107,14 @@ def list_methods():
         print
 
 
+def open_ticket_with_same_summary(summary_template):
+    '''ticket ids that contain the same summary and are not closed! (e.g. an incident that happened already not long time ago
+    if there is more than 1 matching ticket, use the one with the highest id
+    '''
+    return SERVER.ticket.query("summary=" + summary_template + "&status!=closed&order=id&desc=true")
+
 ### /functions ###
+
 
 def main(options, args):
     global SERVER, COMMENT_TEMPLATE
@@ -169,14 +176,11 @@ def main(options, args):
 
     ## search for tickets with same summary_template
 
-    # ticket ids that contain the same summary and are not closed! (e.g. an incident that happened already not long time ago
-    # if there is more than 1 matching ticket, use the one with the highest id
-    open_ticket_with_same_summary = SERVER.ticket.query("summary=" + summary_template + "&status!=closed&order=id&desc=true")
-
-    if open_ticket_with_same_summary:
+    ticket = open_ticket_with_same_summary(summary_template)
+    if ticket:
         # post message to ticket
-        update_ticket(open_ticket_with_same_summary[0])
-        debug_output("appended to ticket #%d because of FULL summary match" % open_ticket_with_same_summary[0])
+        update_ticket(ticket[0])
+        debug_output("appended to ticket #%d because of FULL summary match" % ticket[0])
     else:
         #elseif tickets open for same $hostname
         open_ticket_for_same_host = SERVER.ticket.query("summary^=[" + options.critical_host + "]&status!=closed&order=id&desc=true")

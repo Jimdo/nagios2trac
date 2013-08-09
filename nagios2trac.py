@@ -88,8 +88,14 @@ def read_config(options):
     trac_owner = config.get('Trac', 'ticket_owner')
     TRAC_NOTIFICATIONS = config.get('Trac', 'notifications')
     trac_new_ticket_threshold = int(config.get('Trac', 'new_ticket_threshold'))
+    try:
+        trac_description_template = config.get('Trac', 'description_template')
+        f = open(trac_description_template, 'r')
+        description_template_original = f.read()
+    except:
+        description_template_original = "dummy description"
 
-    return trac_host, trac_user, trac_password, trac_owner, trac_new_ticket_threshold
+    return trac_host, trac_user, trac_password, trac_owner, trac_new_ticket_threshold, description_template_original
 
 
 def list_methods():
@@ -122,7 +128,7 @@ def open_ticket_for_same_host(critical_host):
 
 def main(options, args):
     global SERVER
-    trac_host, trac_user, trac_password, trac_owner, trac_new_ticket_threshold = read_config(options)
+    trac_host, trac_user, trac_password, trac_owner, trac_new_ticket_threshold, description_template_original = read_config(options)
 
     # prefer cli option over configfile
     new_ticket_threshold = options.new_ticket_threshold or trac_new_ticket_threshold
@@ -141,39 +147,7 @@ def main(options, args):
     # this is only needed inside comment_template because the trac summary can online contain a single line
     comment_template_plain = "{{{ \n[" + options.critical_host + "] " + options.service_state + ": " + options.description + "\n" + options.long_output + "\n}}}"
     comment_template = comment_template_plain.replace('\\n', '\n')
-    description_template = """=== Incident ===
-    * Does it affect only one user/colleague? Not an incident, normal support case.
-    * What has been noticed? (e.g. nagios check + host that failed)
-    """ + comment_template + """
-    * Who is affected? (all users, limited set of users, departments, partners, ...)
-    * When did it start? (e.g. nagios reported time)
-    * How did you notice it (Monitoring, Support..?)
-
-    === Spread the word first, then act ===
-    * Always put a link to this ticket everywhere you inform your colleagues about it
-    * Tell Yammer group "System Status" when the incident started (latest 30min after incident notice!)
-    * Update Yammer at least every hour for incidents during office hours, even if nothing changed.
-    * Be available in Infrastruktur channel and communicate to your colleagues
-    * Announce waiting times longer than one hour (e.g. waiting for the hosting provider) as "time for next update"
-
-    * Update Ticket and Yammer AFTER incident is over, too.
-
-    === Recommended Checks and Actions ===
-    * [wiki:NuetzlicheShell], [wiki:AdminHandbuch]
-
-    === Ask for Help (esp. during office hours) ===
-    * Get help at big incidents and pair the incident
-    * Ask for help in communication/documentation for bigger incidents
-
-    === Post Mortem Analysis ===
-    * How has it been resolved? What was the fix?
-    * How was the issue triggered? What have been the circumstances?
-    * What was affected? (see Incident, Who is already documented there)
-    * How can this situation be avoided in the future? (only relevant if "rule of three" triggered or effect is considered "major" by the team)
-    * Did a known standard solution work? If not: Document it! e.g. in [wiki:NuetzlicheShell], [wiki:AdminHandbuch]
-    * Close the ticket, if no further actions can be derived from it.
-    """
-
+    description_template = description_template_original.replace(':comment_template', comment_template)
     ## it this a recovery message? ##
 
     service_recovered = options.service_state.startswith(('OK', 'UP')) or options.service_state.endswith('ACKNOWLEDGEMENT')

@@ -9,3 +9,4 @@ notifications=yes
 # only post to it if last edit is time is < new_ticket_threshold minutes.
 # otherwise create a new ticket
 new_ticket_threshold=120
+description_template=description_template.txt

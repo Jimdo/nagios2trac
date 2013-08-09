@@ -176,7 +176,7 @@ def main(options, args):
 
     ## it this a recovery message? ##
 
-    service_recovered = options.service_state.startswith(('OK', 'UP'))
+    service_recovered = options.service_state.startswith(('OK', 'UP')) or options.service_state.endswith('ACKNOWLEDGEMENT')
 
     ## search for tickets with same summary_template
 

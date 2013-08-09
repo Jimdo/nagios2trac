@@ -183,7 +183,7 @@ def main(options, args):
     ticket = open_ticket_with_same_summary(summary_template)
     if ticket:
         # post message to ticket
-        update_ticket(ticket[0])
+        update_ticket(ticket[0], comment_template)
         debug_output("appended to ticket #%d because of FULL summary match" % ticket[0])
     else:
         #elseif tickets open for same $hostname
@@ -201,7 +201,7 @@ def main(options, args):
                 debug_output("ticket has not been modified for more than the configured threshold value (%d) minutes, trying to create a new one" % new_ticket_threshold)
                 create_ticket_if_not_recovered(summary_template, description_template, trac_owner, service_recovered)
             else:
-                update_ticket(ticket[0])
+                update_ticket(ticket[0], comment_template)
                 debug_output("appended to ticket #%d because of hostname match" % ticket[0])
         else:
             debug_output("creating a new ticket")

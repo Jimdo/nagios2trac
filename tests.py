@@ -48,11 +48,11 @@ class TestNagios2Trac(unittest.TestCase):
         self.new_ticket_threshold = 120
         self.summary_template = '[myhost] CRITICAL: myservice running'
         self.comment_template_plain = "{{{ \n[myhost] CRITICAL: myservice running\nloooong\n}}}"
-        self.COMMENT_TEMPLATE = self.comment_template_plain.replace('\\n', '\n')
+        self.comment_template = self.comment_template_plain.replace('\\n', '\n')
         self.description_template = """=== Incident ===
     * Does it affect only one user/colleague? Not an incident, normal support case.
     * What has been noticed? (e.g. nagios check + host that failed)
-    """ + self.COMMENT_TEMPLATE + """
+    """ + self.comment_template + """
     * Who is affected? (all users, limited set of users, departments, partners, ...)
     * When did it start? (e.g. nagios reported time)
     * How did you notice it (Monitoring, Support..?)
@@ -130,7 +130,7 @@ class TestNagios2Trac(unittest.TestCase):
         self.nagios2trac.open_ticket_with_same_summary.return_value = [1337]
         self.nagios2trac.main(self.options, self.args)
         self.nagios2trac.open_ticket_with_same_summary.assert_called_with(self.summary_template)
-        self.nagios2trac.update_ticket.assert_called_with(1337)
+        self.nagios2trac.update_ticket.assert_called_with(1337, self.comment_template)
 
     def testFoundOpenTicketForSameHostWithThresholdExceeded(self):
         service_recovered = False
@@ -153,7 +153,7 @@ class TestNagios2Trac(unittest.TestCase):
         # use current time to be within threshold
         self.nagios2trac.xmlrpclib.ServerProxy().ticket.get.assert_called_with(12)
 
-        self.nagios2trac.update_ticket.assert_called_with(12)
+        self.nagios2trac.update_ticket.assert_called_with(12, self.comment_template)
 
     def testFoundNoMatchingOpenTicket(self):
         service_recovered = False

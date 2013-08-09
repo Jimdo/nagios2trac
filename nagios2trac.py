@@ -12,7 +12,6 @@ import logging
 
 SERVER = None
 TRAC_NOTIFICATIONS = None
-COMMENT_TEMPLATE = None
 
 
 def get_options_and_args(argv):
@@ -67,8 +66,8 @@ def create_ticket_if_not_recovered(summary_template, description_template, trac_
         debug_output("service or host recovered, though not creating a new ticket")
 
 
-def update_ticket(ticket_id):
-    SERVER.ticket.update(ticket_id, COMMENT_TEMPLATE, {}, TRAC_NOTIFICATIONS)
+def update_ticket(ticket_id, comment_template):
+    SERVER.ticket.update(ticket_id, comment_template, {}, TRAC_NOTIFICATIONS)
     debug_output("update ticket %d" % ticket_id)
 
 
@@ -122,7 +121,7 @@ def open_ticket_for_same_host(critical_host):
 
 
 def main(options, args):
-    global SERVER, COMMENT_TEMPLATE
+    global SERVER
     trac_host, trac_user, trac_password, trac_owner, trac_new_ticket_threshold = read_config(options)
 
     # prefer cli option over configfile
@@ -139,13 +138,13 @@ def main(options, args):
     summary_template = "[" + options.critical_host + "] " + options.service_state + ": " + options.description
     # optparser escapes \n, so it is not possible to add newlines into the longoutput that are actually interpreted by trac
     # we workaround this by "unescaping" all escaped \n
-    # this is only needed inside COMMENT_TEMPLATE because the trac summary can online contain a single line
+    # this is only needed inside comment_template because the trac summary can online contain a single line
     comment_template_plain = "{{{ \n[" + options.critical_host + "] " + options.service_state + ": " + options.description + "\n" + options.long_output + "\n}}}"
-    COMMENT_TEMPLATE = comment_template_plain.replace('\\n', '\n')
+    comment_template = comment_template_plain.replace('\\n', '\n')
     description_template = """=== Incident ===
     * Does it affect only one user/colleague? Not an incident, normal support case.
     * What has been noticed? (e.g. nagios check + host that failed)
-    """ + COMMENT_TEMPLATE + """
+    """ + comment_template + """
     * Who is affected? (all users, limited set of users, departments, partners, ...)
     * When did it start? (e.g. nagios reported time)
     * How did you notice it (Monitoring, Support..?)

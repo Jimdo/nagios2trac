@@ -1,3 +1,7 @@
+# 0.3
+  * refactored script in order to make it testable
+  * added unit tests
+
 # 0.2.2
   * BUGFIX: order descending when querying for open trac tickets in order to always match the latest ticket for comparison
 

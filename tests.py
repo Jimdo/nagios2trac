@@ -17,10 +17,30 @@ class TestFunctions(unittest.TestCase):
         options_list = list(itertools.chain(*self.options_dict.items()))
         self.options, self.args = self.nagios2trac.get_options_and_args(options_list)
         self.summary_template = '[myhost] CRITICAL: myservice running'
+        self.critical_host = 'myhost'
+        self.description = 'some service'
 
-    def testOpenTicketWithSameSummary(self):
-        self.nagios2trac.open_ticket_with_same_summary(self.summary_template)
-        self.nagios2trac.SERVER.ticket.query.assert_called_with("summary=" + self.summary_template + "&status!=closed&order=id&desc=true")
+    def testOpenTicketWithSameSummaryTrue(self):
+        self.nagios2trac.open_ticket_for_same_host = Mock()
+        self.nagios2trac.open_ticket_for_same_host.return_value = [1337]
+        self.nagios2trac.SERVER.ticket.get.return_value = [0, 0, datetime.datetime.utcnow(), {'summary': 'some service'}]
+        result = self.nagios2trac.open_ticket_with_same_summary(self.critical_host, self.description)
+        self.nagios2trac.SERVER.ticket.get.assert_called_with(1337)
+        self.assertEqual(result, [1337])
+
+    def testOpenTicketWithSameSummaryNoHostMatch(self):
+        self.nagios2trac.open_ticket_for_same_host = Mock()
+        self.nagios2trac.open_ticket_for_same_host.return_value = None
+        result = self.nagios2trac.open_ticket_with_same_summary(self.critical_host, self.description)
+        self.assertEqual(result, None)
+
+    def testOpenTicketWithSameSummaryNoDescriptionMatch(self):
+        self.nagios2trac.open_ticket_for_same_host = Mock()
+        self.nagios2trac.open_ticket_for_same_host.return_value = [1337]
+        self.nagios2trac.SERVER.ticket.get.return_value = [0, 0, datetime.datetime.utcnow(), {'summary': 'bla'}]
+        result = self.nagios2trac.open_ticket_with_same_summary(self.critical_host, self.description)
+        self.nagios2trac.SERVER.ticket.get.assert_called_with(1337)
+        self.assertEqual(result, None)
 
     def testOpenTicketForSameHost(self):
         self.nagios2trac.open_ticket_for_same_host(self.options.critical_host)
@@ -129,7 +149,7 @@ class TestNagios2Trac(unittest.TestCase):
     def testFoundOpenTicketWithSameSummary(self):
         self.nagios2trac.open_ticket_with_same_summary.return_value = [1337]
         self.nagios2trac.main(self.options, self.args)
-        self.nagios2trac.open_ticket_with_same_summary.assert_called_with(self.summary_template)
+        self.nagios2trac.open_ticket_with_same_summary.assert_called_with(self.options.critical_host, self.options.description)
         self.nagios2trac.update_ticket.assert_called_with(1337, self.comment_template)
 
     def testFoundOpenTicketForSameHostWithThresholdExceeded(self):

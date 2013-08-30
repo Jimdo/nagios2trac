@@ -112,11 +112,15 @@ def list_methods():
         print
 
 
-def open_ticket_with_same_summary(summary_template):
-    '''ticket ids that contain the same summary and are not closed! (e.g. an incident that happened already not long time ago
+def open_ticket_with_same_summary(critical_host, description):
+    '''ticket ids that contain the same summary (except service_state) and are not closed! (e.g. an incident that happened already not long time ago
     if there is more than 1 matching ticket, use the one with the highest id
     '''
-    return SERVER.ticket.query("summary=" + summary_template + "&status!=closed&order=id&desc=true")
+    ticket_for_same_host = open_ticket_for_same_host(critical_host)
+    if ticket_for_same_host:
+        full_summary = SERVER.ticket.get(ticket_for_same_host[0])[3]['summary']
+        if full_summary.endswith(description):
+            return ticket_for_same_host
 
 
 def open_ticket_for_same_host(critical_host):
@@ -152,9 +156,9 @@ def main(options, args):
 
     service_recovered = options.service_state.startswith(('OK', 'UP')) or options.service_state.endswith('ACKNOWLEDGEMENT')
 
-    ## search for tickets with same summary_template
+    ## search for tickets with same summary_template (while ignoring service state)
 
-    ticket = open_ticket_with_same_summary(summary_template)
+    ticket = open_ticket_with_same_summary(options.critical_host, options.description)
     if ticket:
         # post message to ticket
         update_ticket(ticket[0], comment_template)

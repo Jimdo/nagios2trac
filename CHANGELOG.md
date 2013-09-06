@@ -1,3 +1,9 @@
+# 0.4
+ * exclude service state when matching full summary
+ * outsource the description template into an own file in order to make the code better readable
+  * new config option: description_template
+ * dont create a new ticket when a host or service was acknowledged
+
 # 0.3
   * refactored script in order to make it testable
   * added unit tests

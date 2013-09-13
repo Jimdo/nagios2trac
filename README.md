@@ -30,10 +30,12 @@ $ python setup.py install
 
 Usage
 =====
-Define these notification commands
-* service check:
+Define these notification commands in nagios
 
-        ./nagios2trac.py --service-state "$SERVICESTATE$ $NOTIFICATIONTYPE$" --host-name "$HOSTNAME$" --description "$SERVICEDESC$" --longoutput "$SERVICEOUTPUT$"
-* host check:
+ * service check:
 
-        ./nagios2trac.py --service-state "$HOSTSTATE$ $NOTIFICATIONTYPE$" --host-name "$HOSTNAME$" --description "" --longoutput ""
+        nagios2trac.py --service-state "$SERVICESTATE$ $NOTIFICATIONTYPE$" --host-name "$HOSTNAME$" --description "$SERVICEDESC$" --longoutput "$SERVICEOUTPUT$"
+
+ * host check:
+
+        nagios2trac.py --service-state "$HOSTSTATE$ $NOTIFICATIONTYPE$" --host-name "$HOSTNAME$" --description "" --longoutput ""

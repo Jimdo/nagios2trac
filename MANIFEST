@@ -1,4 +1,7 @@
 README.md
 CHANGELOG.md
+rst/README.rst
+rst/CHANGELOG.rst
+LICENSE
 nagios2trac.py
 setup.py

@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Jimdo/nagios2trac.png?branch=master)](https://travis-ci.org/Jimdo/nagios2trac)
+
 nagios2trac
 ===========
 

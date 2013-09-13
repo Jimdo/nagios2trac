@@ -8,5 +8,6 @@ setup(name='nagios2trac',
       author='Daniel Bonkowski',
       author_email='bonko@jimdo.com',
       url='https://github.com/Jimdo/nagios2trac',
-      scripts = ['nagios2trac.py'],
-     )
+      license='Apache',
+      scripts=['nagios2trac.py'],
+      )

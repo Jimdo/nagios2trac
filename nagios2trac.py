@@ -154,7 +154,9 @@ def main(options, args):
     description_template = description_template_original.replace(':comment_template', comment_template)
     ## it this a recovery message? ##
 
-    service_recovered = options.service_state.startswith(('OK', 'UP')) or options.service_state.endswith('ACKNOWLEDGEMENT')
+    service_recovered = (
+        options.service_state.startswith(('OK', 'UP'))
+        or options.service_state.endswith(('ACKNOWLEDGEMENT', 'FLAPPINGSTART', 'FLAPPINGSTOP')))
 
     ## search for tickets with same summary_template (while ignoring service state)
 

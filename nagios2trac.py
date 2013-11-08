@@ -24,7 +24,7 @@ def get_options_and_args(argv):
     parser.add_option("-c", "--config", action="store", type="string", dest="config", default="/etc/nagios3/nagios2trac.conf", help="path to configfile, defaults to /etc/nagios3/nagios2trac.conf")
     parser.add_option("-d", "--debug", action="store_true", dest="debug", help="more verbosive output")
     parser.add_option("--new-ticket-threshold", action="store", type="int", dest="new_ticket_threshold", help="create a new ticket if existing one has not been modified since <int> minutes")
-    parser.add_option("--trac-ticket-owner", action="store", type="string", dest="trac_ticket_owner", help="the TRAC user the ticket gets assigned to")
+    parser.add_option("--ticket-owner", action="store", type="string", dest="trac_ticket_owner", help="the TRAC user the ticket gets assigned to")
     parser.add_option("--list-methods", action="store_true", dest="listmethods", help="list xmlrpc methods (debug)")
 
     (options, args) = parser.parse_args(argv)

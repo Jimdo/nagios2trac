@@ -24,6 +24,7 @@ def get_options_and_args(argv):
     parser.add_option("-c", "--config", action="store", type="string", dest="config", default="/etc/nagios3/nagios2trac.conf", help="path to configfile, defaults to /etc/nagios3/nagios2trac.conf")
     parser.add_option("-d", "--debug", action="store_true", dest="debug", help="more verbosive output")
     parser.add_option("--new-ticket-threshold", action="store", type="int", dest="new_ticket_threshold", help="create a new ticket if existing one has not been modified since <int> minutes")
+    parser.add_option("--ticket-owner", action="store", type="string", dest="trac_ticket_owner", help="the TRAC user the ticket gets assigned to")
     parser.add_option("--list-methods", action="store_true", dest="listmethods", help="list xmlrpc methods (debug)")
 
     (options, args) = parser.parse_args(argv)
@@ -85,7 +86,7 @@ def read_config(options):
     trac_host = config.get('Trac', 'host')
     trac_user = config.get('Trac', 'user')
     trac_password = config.get('Trac', 'password')
-    trac_owner = config.get('Trac', 'ticket_owner')
+    trac_ticket_owner = config.get('Trac', 'ticket_owner')
     TRAC_NOTIFICATIONS = config.get('Trac', 'notifications')
     trac_new_ticket_threshold = int(config.get('Trac', 'new_ticket_threshold'))
     try:
@@ -95,7 +96,7 @@ def read_config(options):
     except:
         description_template_original = "dummy description"
 
-    return trac_host, trac_user, trac_password, trac_owner, trac_new_ticket_threshold, description_template_original
+    return trac_host, trac_user, trac_password, trac_ticket_owner, trac_new_ticket_threshold, description_template_original
 
 
 def list_methods():
@@ -132,10 +133,11 @@ def open_ticket_for_same_host(critical_host):
 
 def main(options, args):
     global SERVER
-    trac_host, trac_user, trac_password, trac_owner, trac_new_ticket_threshold, description_template_original = read_config(options)
+    trac_host, trac_user, trac_password, trac_ticket_owner, trac_new_ticket_threshold, description_template_original = read_config(options)
 
     # prefer cli option over configfile
     new_ticket_threshold = options.new_ticket_threshold or trac_new_ticket_threshold
+    trac_owner = options.trac_ticket_owner or trac_ticket_owner
 
     ### initialize SERVER ###
     SERVER = xmlrpclib.ServerProxy("https://%s:%s@%s/trac/login/xmlrpc" % (trac_user, trac_password, trac_host))

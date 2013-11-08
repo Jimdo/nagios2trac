@@ -1,6 +1,11 @@
 Changelog
 =========
 
+## 0.4.1
+ * default description_template is more generic now
+ * Bugfix: flapping state notifications don't create a new ticket anymore
+ * New param: ticket-owner. (optional) specify the trac ticket owner via commandline
+
 ## 0.4
  * exclude service state when matching full summary
  * outsource the description template into an own file in order to make the code better readable

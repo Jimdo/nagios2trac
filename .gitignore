@@ -28,3 +28,7 @@ pip-log.txt
 .mr.developer.cfg
 
 *.swp
+
+# IntelliJ
+.idea
+*.iml

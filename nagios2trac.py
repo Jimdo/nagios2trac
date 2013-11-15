@@ -128,7 +128,8 @@ def open_ticket_for_same_host(critical_host):
     return SERVER.ticket.query("summary^=[" + critical_host + "]&status!=closed&order=id&desc=true")
 
 
-### /functions ###
+def last_modified_time(ticket):
+    return SERVER.ticket.get(ticket[0])[2]
 
 
 def main(options, args):
@@ -172,7 +173,7 @@ def main(options, args):
         ticket = open_ticket_for_same_host(options.critical_host)
         if ticket:
             # check last modified time of existing ticket
-            last_modified_utc = SERVER.ticket.get(ticket[0])[2]
+            last_modified_utc = last_modified_time(ticket)
 
             # we need the localtime in utc too
             current_time_utc = datetime.datetime.utcnow()

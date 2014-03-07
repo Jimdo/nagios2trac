@@ -1,6 +1,10 @@
 Changelog
 =========
 
+## 0.5
+ * fix rst formatting
+ * raising to 0.5 because the prior version introduced a new param and therefore should have increased minor version
+
 ## 0.4.1
  * default description_template is more generic now
  * Bugfix: flapping state notifications don't create a new ticket anymore

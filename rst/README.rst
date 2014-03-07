@@ -17,10 +17,18 @@ Installation
 ============
 
 The easiest way to install nagios2trac and its dependencies:
-``$ pip install nagios2trac``
+
+::
+
+    $ pip install nagios2trac
 
 Alternatively install it from source
-``$ git clone git@github.com:Jimdo/nagios2trac.git $ cd nagios2trac/ $ python setup.py install``
+
+::
+
+    $ git clone git@github.com:Jimdo/nagios2trac.git
+    $ cd nagios2trac/
+    $ python setup.py install
 
 Usage
 =====

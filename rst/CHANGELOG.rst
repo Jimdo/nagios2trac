@@ -4,9 +4,11 @@ Changelog
 0.4.1
 -----
 
-- default description\_template is more generic now
-- Bugfix: flapping state notifications don't create a new ticket anymore
-- New param: ticket-owner. (optional) specify the trac ticket owner via commandline
+-  default description\_template is more generic now
+-  Bugfix: flapping state notifications don't create a new ticket
+   anymore
+-  New param: ticket-owner. (optional) specify the trac ticket owner via
+   commandline
 
 0.4
 ---

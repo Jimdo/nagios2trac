@@ -2,7 +2,7 @@
 
 # python 2.6
 # http://trac-hacks.org/wiki/XmlRpcPlugin
-import xmlrpclib
+import pytrac
 import sys
 import ConfigParser
 import os
@@ -25,7 +25,6 @@ def get_options_and_args(argv):
     parser.add_option("-d", "--debug", action="store_true", dest="debug", help="more verbosive output")
     parser.add_option("--new-ticket-threshold", action="store", type="int", dest="new_ticket_threshold", help="create a new ticket if existing one has not been modified since <int> minutes")
     parser.add_option("--ticket-owner", action="store", type="string", dest="trac_ticket_owner", help="the TRAC user the ticket gets assigned to")
-    parser.add_option("--list-methods", action="store_true", dest="listmethods", help="list xmlrpc methods (debug)")
 
     (options, args) = parser.parse_args(argv)
 
@@ -55,7 +54,7 @@ def debug_output(output):
 
 
 def create_ticket(summary_template, description_template, trac_owner):
-    SERVER.ticket.create(summary_template, description_template, {'owner': trac_owner, 'type': 'Incident', 'priority': 'critical'}, TRAC_NOTIFICATIONS)
+    SERVER.create(summary_template, description_template, owner=trac_owner, ticket_type='Incident', priority='critical')
     debug_output("created a new ticket with summary:" + summary_template + " and owner " + trac_owner)
 
 
@@ -68,7 +67,7 @@ def create_ticket_if_not_recovered(summary_template, description_template, trac_
 
 
 def update_ticket(ticket_id, comment_template):
-    SERVER.ticket.update(ticket_id, comment_template, {}, TRAC_NOTIFICATIONS)
+    SERVER.comment(ticket_id, comment_template)
     debug_output("update ticket %d" % ticket_id)
 
 
@@ -99,33 +98,21 @@ def read_config(options):
     return trac_host, trac_user, trac_password, trac_ticket_owner, trac_new_ticket_threshold, description_template_original
 
 
-def list_methods():
-    multicall = xmlrpclib.MultiCall(SERVER)
-
-    # FIXME make me a function
-    for method in SERVER.system.listMethods():
-        multicall.system.methodHelp(method)
-
-    for help in multicall():
-        lines = help.splitlines()
-        print lines[0]
-        print '\n'.join(['  ' + x for x in lines[2:]])
-        print
-
-
 def open_ticket_with_same_summary(critical_host, description):
     '''ticket ids that contain the same summary (except service_state) and are not closed! (e.g. an incident that happened already not long time ago
     if there is more than 1 matching ticket, use the one with the highest id
     '''
     ticket_for_same_host = open_ticket_for_same_host(critical_host)
     if ticket_for_same_host:
-        full_summary = SERVER.ticket.get(ticket_for_same_host[0])[3]['summary']
+        full_summary = SERVER.info(ticket_for_same_host[0])['summary']
         if full_summary.endswith(description):
             return ticket_for_same_host
 
 
 def open_ticket_for_same_host(critical_host):
-    return SERVER.ticket.query("summary^=[" + critical_host + "]&status!=closed&order=id&desc=true")
+#    return SERVER.ticket.query("summary^=[" + critical_host + "]&status!=closed&order=id&desc=true")
+    # FIXME
+    return SERVER.ticket.search(summary="[%s]", status=!!!!!!(needs pytrac implementation), order='id', desc=True)
 
 
 ### /functions ###
@@ -133,6 +120,8 @@ def open_ticket_for_same_host(critical_host):
 
 def main(options, args):
     global SERVER
+    #beautify me
+    SERVER.notify = TRAC_NOTIFICATIONS
     trac_host, trac_user, trac_password, trac_ticket_owner, trac_new_ticket_threshold, description_template_original = read_config(options)
 
     # prefer cli option over configfile
@@ -140,7 +129,7 @@ def main(options, args):
     trac_owner = options.trac_ticket_owner or trac_ticket_owner
 
     ### initialize SERVER ###
-    SERVER = xmlrpclib.ServerProxy("https://%s:%s@%s/trac/login/xmlrpc" % (trac_user, trac_password, trac_host))
+    SERVER = pytrac.connect(trac_host, trac_user, trac_password)
 
     if options.listmethods:
         list_methods()
@@ -172,7 +161,7 @@ def main(options, args):
         ticket = open_ticket_for_same_host(options.critical_host)
         if ticket:
             # check last modified time of existing ticket
-            last_modified_utc = SERVER.ticket.get(ticket[0])[2]
+            last_modified_utc = SERVER.info(ticket[0])['modified']
 
             # we need the localtime in utc too
             current_time_utc = datetime.datetime.utcnow()

@@ -24,7 +24,7 @@ class PyPandoc(Command):
         self.convert('CHANGELOG.md', 'rst/CHANGELOG.rst')
 
 setup(name='nagios2trac',
-      version='0.5',
+      version='0.5.1',
       description='Let Nagios Create or Comment on Trac Tickets',
       long_description=open('rst/README.rst').read() + '\n\n' +
                        open('rst/CHANGELOG.rst').read(),

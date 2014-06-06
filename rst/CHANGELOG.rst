@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.5.1
+-----
+
+-  use setup from setuptools so the tarball contains all files needed by fpm-cookery
+
 0.5
 ---
 

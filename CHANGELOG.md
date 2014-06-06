@@ -1,6 +1,9 @@
 Changelog
 =========
 
+## 0.5.1
+ * use setup from setuptools so the tarball contains all files needed by fpm-cookery
+
 ## 0.5
  * fix rst formatting
  * raising to 0.5 because the prior version introduced a new param and therefore should have increased minor version

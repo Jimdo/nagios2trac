@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import Command
-from distutils.core import setup
+from setuptools import Command, setup
 import sys
 
 
@@ -34,5 +33,6 @@ setup(name='nagios2trac',
       url='https://github.com/Jimdo/nagios2trac',
       license='Apache',
       scripts=['nagios2trac.py'],
-      cmdclass={'doc': PyPandoc}
+      cmdclass={'doc': PyPandoc},
+      include_package_data=True,
       )

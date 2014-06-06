@@ -29,16 +29,16 @@ def get_options_and_args(argv):
     (options, args) = parser.parse_args(argv)
 
     # FIXME - beautify
-    if options.critical_host is None and not options.listmethods:
+    if options.critical_host is None:
         parser.error("please specify a host-name")
 
-    if options.service_state is None and not options.listmethods:
+    if options.service_state is None:
         parser.error("please specify a service-state")
 
-    if options.description is None and not options.listmethods:
+    if options.description is None:
         parser.error("please specify a description")
 
-    if options.long_output is None and not options.listmethods:
+    if options.long_output is None:
         parser.error("please specify a longoutput")
 
     if options.debug:
@@ -110,9 +110,7 @@ def open_ticket_with_same_summary(critical_host, description):
 
 
 def open_ticket_for_same_host(critical_host):
-#    return SERVER.ticket.query("summary^=[" + critical_host + "]&status!=closed&order=id&desc=true")
-    # FIXME
-    return SERVER.ticket.search(summary="[%s]", status=!!!!!!(needs pytrac implementation), order='id', desc=True)
+    return SERVER.search_raw("summary^=[" + critical_host + "]&status!=closed&order=id&desc=true")
 
 
 ### /functions ###
@@ -130,10 +128,6 @@ def main(options, args):
 
     ### initialize SERVER ###
     SERVER = pytrac.connect(trac_host, trac_user, trac_password)
-
-    if options.listmethods:
-        list_methods()
-        sys.exit(1)
 
     #######
     summary_template = "[" + options.critical_host + "] " + options.service_state + ": " + options.description

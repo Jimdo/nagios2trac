@@ -44,7 +44,7 @@ class TestFunctions(unittest.TestCase):
 
     def testOpenTicketForSameHost(self):
         self.nagios2trac.open_ticket_for_same_host(self.options.critical_host)
-        self.nagios2trac.SERVER.ticket.query.assert_called_with("summary^=[" + self.options.critical_host + "]&status!=closed&order=id&desc=true")
+        self.nagios2trac.SERVER.search_raw.assert_called_with("summary^=[" + self.options.critical_host + "]&status!=closed&order=id&desc=true")
 
 
 class TestNagios2Trac(unittest.TestCase):
@@ -142,11 +142,11 @@ class TestNagios2Trac(unittest.TestCase):
         self.nagios2trac.open_ticket_with_same_summary.return_value = []
         self.nagios2trac.open_ticket_for_same_host.return_value = [12]
         # Timestamp of now to stay in threshold
-        self.nagios2trac.xmlrpclib.ServerProxy().ticket.get.return_value = [0, 0, datetime.datetime.utcnow()]
+        self.nagios2trac.SERVER.info.return_value = [0, 0, datetime.datetime.utcnow()]
         self.nagios2trac.main(self.options, self.args)
         self.nagios2trac.open_ticket_for_same_host.assert_called_with(self.options.critical_host)
         # use current time to be within threshold
-        self.nagios2trac.xmlrpclib.ServerProxy().ticket.get.assert_called_with(12)
+        self.nagios2trac.ticket.info.assert_called_with(12)
 
         self.nagios2trac.update_ticket.assert_called_with(12, self.comment_template)
 
